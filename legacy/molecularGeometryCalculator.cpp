@@ -1,14 +1,13 @@
 #include <iostream>
 #include <map>
 #include <string>
-#include <opencv2/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc.hpp>
-
+#include <opencv2\core.hpp>
+#include <opencv2\highgui.hpp>
+#include <opencv2\imgproc.hpp>
 
 using namespace std;
 
-main() {   
+int main() {   
     string molecule;
     int i, j, wants=0, got=0, valence=0, bonds=0, numatom=0, lonepairs, domains=0, midwant=0, midgot=0, height=1000, width=1000;
     char charge=0;
@@ -152,12 +151,17 @@ main() {
         }
         if(domains==4){
             if(lonepairs==0){
-            cv::Mat img = cv::imread("tetrahedral.png");
-            cv::putText(img, "H", cv::Point(50, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 0, 0), 2);
-            cv::putText(img, "O", cv::Point(100, 100), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 2);
-            cv::imshow("Molecule", img);
-            cv::waitKey(0);
-            cv::imwrite("output_image.png", img);
+                cv::Mat img = cv::imread("tetrahedral.png");
+                if (img.empty()) {
+                    cout << "Error: Image not found or unable to open the image file!" << endl;
+                    return -1;
+                }
+                cout << "it got here at least";
+                cv::putText(img, "H", cv::Point(50, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 0, 0), 2);
+                cv::putText(img, "O", cv::Point(100, 100), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 2);
+                cv::imshow("Molecule", img);
+                cv::waitKey(0);
+                cv::imwrite("output_image.png", img);
             }
             else if(lonepairs==1){
                 // trigonal pyrimidal

@@ -73,6 +73,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>c:\opencv\opencv\build\include;$(IncludePath)</IncludePath>
     <LibraryPath>c:\opencv\opencv\build\x64\vc16\lib;$(LibraryPath)</LibraryPath>
+    <OutDir>C:\Users\barca\source\repos\molecularGeometryCalculator\</OutDir>
+    <CustomBuildAfterTargets />
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -112,8 +114,16 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opencv_world4100.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opencv_core4100d.lib;opencv_highgui4100d.lib;opencv_imgproc4100d.lib;</AdditionalDependencies>
     </Link>
+    <CustomBuildStep>
+      <Command>g++ -x c++ -o molecularGeometryCalculator.exe molecularGeometryCalculator.cpp -I"C:/opencv/opencv/build/include" -L"C:/opencv/opencv/build/x64/vc16/lib"  -lopencv_core4100d.lib -lopencv_highgui4100d.lib -lopencv_imgproc4100d.lib</Command>
+      <Outputs>molecularGeometryCalculator.exe</Outputs>
+    </CustomBuildStep>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
