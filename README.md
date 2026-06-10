@@ -28,3 +28,8 @@ Three.js r169 (WebGPU renderer, TSL materials) · PubChem REST API · single HTM
 ## Legacy
 
 The original C++ project is in `legacy/`. It uses a hardcoded element database and VSEPR lookup table. No rendering — just terminal output.
+
+## New Repo
+
+This project is now integrated into the ollie frontend repo:
+https://github.com/Rubixion/ollie-frontend
