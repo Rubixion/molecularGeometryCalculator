@@ -95,7 +95,7 @@
     .val.accent { color: var(--cyan); }
 
     /* ── right-side panel slot ── */
-    #right-panel { position: absolute; top: 72px; right: 28px; z-index: 10; min-width: 150px; }
+    #right-panel { position: absolute; top: 72px; right: 28px; z-index: 10; min-width: 150px; display: flex; flex-direction: column; gap: 12px; }
 
     /* ── legend ── */
     .leg-title { color: rgba(255,255,255,0.22); font-size: 8.5px; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 10px; }
@@ -105,7 +105,7 @@
     /* ── atom detail panel ── */
     #atom-panel {
       display: none; flex-direction: column; gap: 0;
-      width: 270px; max-height: calc(100vh - 120px); overflow-y: auto;
+      width: 270px; max-height: calc(100vh - 220px); overflow-y: auto;
       background: rgba(7,7,15,0.92); backdrop-filter: blur(24px);
       border: 1px solid var(--border); border-radius: 16px;
     }
@@ -271,6 +271,7 @@
       <div class="info-row">
         <div class="info-item"><span class="lbl">Molecule</span><span class="val accent" id="v-mol">—</span></div>
         <div class="info-item"><span class="lbl">Geometry</span><span class="val" id="v-geo">—</span></div>
+        <div class="info-item"><span class="lbl">Bond Angle</span><span class="val" id="v-ang">—</span></div>
         <div class="info-item"><span class="lbl">Bonds</span><span class="val" id="v-bnd">—</span></div>
         <div class="info-item"><span class="lbl">Atoms</span><span class="val" id="v-atm">—</span></div>
         <div class="info-item"><span class="lbl">MW</span><span class="val" id="v-mw">—</span></div>
@@ -712,7 +713,28 @@ function analyzeGeometry(atoms, bonds) {
   let geoName = GEO_BY_NC[neighbors.length] ?? `${neighbors.length} bonds`
   if (neighbors.length === 3 && lonePairs === 1) geoName = 'Trigonal Pyramidal'
   if (neighbors.length === 2 && lonePairs >= 1)  geoName = 'Bent'
-  return {geoName}
+
+  // Compute bond angle from 3D positions (only for uniform-angle molecules)
+  let bondAngle = null
+  if (neighbors.length >= 2) {
+    const cx = central.x, cy = central.y, cz = central.z
+    const angles = []
+    for (let i = 0; i < neighbors.length; i++) {
+      for (let j = i+1; j < neighbors.length; j++) {
+        const ax=neighbors[i].x-cx, ay=neighbors[i].y-cy, az=neighbors[i].z-cz
+        const bx=neighbors[j].x-cx, by=neighbors[j].y-cy, bz=neighbors[j].z-cz
+        const dot = ax*bx+ay*by+az*bz
+        const mag = Math.sqrt((ax*ax+ay*ay+az*az)*(bx*bx+by*by+bz*bz))
+        if (mag > 0) angles.push(Math.acos(Math.max(-1,Math.min(1,dot/mag)))*180/Math.PI)
+      }
+    }
+    if (angles.length) {
+      const avg = angles.reduce((a,b)=>a+b,0)/angles.length
+      const dev = Math.max(...angles.map(a=>Math.abs(a-avg)))
+      if (dev < 8) bondAngle = avg.toFixed(1) + '°'
+    }
+  }
+  return {geoName, bondAngle}
 }
 
 // ── Per-atom detail ───────────────────────────────────────────────────────────
@@ -917,14 +939,17 @@ function renderMol(mol) {
   })
   mol.bonds.forEach(b => addBond(posMap[b.a], posMap[b.b], b.order))
 
-  const geoName = mol.ionic ? 'Ionic Compound' : analyzeGeometry(mol.atoms, mol.bonds).geoName
-  const mw      = mol.mw > 0 ? mol.mw.toFixed(2) + ' u' : '—'
+  const geoResult = mol.ionic ? {geoName:'Ionic Compound', bondAngle:null} : analyzeGeometry(mol.atoms, mol.bonds)
+  const geoName   = geoResult.geoName
+  const mw        = mol.mw > 0 ? mol.mw.toFixed(2) + ' u' : '—'
 
   document.getElementById('v-mol').textContent = mol.formula
   document.getElementById('v-geo').textContent = geoName
   document.getElementById('v-bnd').textContent = mol.bonds.length
   document.getElementById('v-atm').textContent = mol.atoms.length
   document.getElementById('v-mw').textContent  = mw
+
+  document.getElementById('v-ang').textContent = geoResult.bondAngle ?? '—'
 
   const unique = [...new Set(mol.atoms.map(a => a.el))]
   document.getElementById('leg-panel').innerHTML =
@@ -1115,7 +1140,7 @@ window.addEventListener('resize', () => {
   })
 })()
 
-buildMol('water')
+buildMol('caffeine')
 </script>
 </body>
 </html>
