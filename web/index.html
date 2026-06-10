@@ -255,7 +255,7 @@
   <div id="header">
     <span id="title">Molecular Geometry</span>
     <div id="search-row">
-      <input id="molecule-input" type="text" placeholder="H2O  ·  Na2SO4  ·  BF3  ·  aspirin..." autocomplete="off" spellcheck="false">
+      <input id="molecule-input" type="text" placeholder="Try H2O, Na2SO4, caffeine, aspirin" autocomplete="off" spellcheck="false">
       <button id="build-btn">BUILD →</button>
     </div>
   </div>
@@ -323,6 +323,10 @@
         <span class="s-lbl" style="margin:0">Auto-rotate</span>
         <label class="tog"><input type="checkbox" id="tog-rotate"><div class="tog-track"></div><div class="tog-thumb"></div></label>
       </div>
+    </div>
+    <div class="s-section">
+      <div class="s-lbl">Rotation Speed</div>
+      <input type="range" class="s-range" id="rng-speed" min="1" max="51" value="26">
     </div>
   </div>
 
@@ -818,7 +822,7 @@ const controls = new OrbitControls(camera, renderer.domElement)
 controls.enableDamping   = true
 controls.dampingFactor   = 0.07
 controls.autoRotate      = false
-controls.autoRotateSpeed = 0.6
+controls.autoRotateSpeed = 1.2
 controls.minDistance     = 1.5
 controls.maxDistance     = 30
 
@@ -931,6 +935,14 @@ function renderMol(mol) {
   mol.atoms.forEach(a => { cx+=a.x; cy+=a.y; cz+=a.z })
   cx/=mol.atoms.length; cy/=mol.atoms.length; cz/=mol.atoms.length
 
+  let maxR = 0
+  mol.atoms.forEach(a => {
+    const dx=(a.x-cx)*SCALE, dy=(a.y-cy)*SCALE, dz=(a.z-cz)*SCALE
+    maxR = Math.max(maxR, Math.sqrt(dx*dx+dy*dy+dz*dz))
+  })
+  const fovRad = camera.fov * Math.PI / 180
+  _zoomTarget = Math.max(3.5, Math.min(22, (maxR + 0.9) / Math.sin(fovRad/2) * 1.1))
+
   const posMap = {}
   mol.atoms.forEach(a => {
     const p = new THREE.Vector3((a.x-cx)*SCALE, (a.y-cy)*SCALE, (a.z-cz)*SCALE)
@@ -959,7 +971,6 @@ function renderMol(mol) {
       `<span>${el} — ${ed(el).name}</span></div>`
     ).join('')
 
-  controls.autoRotate = true
 }
 
 // ── Atom detail panel ─────────────────────────────────────────────────────────
@@ -1042,7 +1053,20 @@ const raycaster = new THREE.Raycaster()
 const mouse     = new THREE.Vector2()
 
 let _downX = 0, _downY = 0
-renderer.domElement.addEventListener('pointerdown', e => { _downX = e.clientX; _downY = e.clientY })
+let _autoRotateEnabled = false
+let _rotateResumeTimer = null
+
+renderer.domElement.addEventListener('pointerdown', e => {
+  _downX = e.clientX; _downY = e.clientY
+  clearTimeout(_rotateResumeTimer)
+  controls.autoRotate = false
+})
+
+renderer.domElement.addEventListener('pointerup', () => {
+  if (!_autoRotateEnabled) return
+  clearTimeout(_rotateResumeTimer)
+  _rotateResumeTimer = setTimeout(() => { controls.autoRotate = true }, 700)
+})
 
 renderer.domElement.addEventListener('click', e => {
   if (!currentMol) return
@@ -1065,7 +1089,6 @@ renderer.domElement.addEventListener('click', e => {
   mesh.material = _selMat
   const atom    = currentMol.atoms.find(a => a.id === mesh.userData.atomId)
   if (atom) showAtomPanel(atom)
-  controls.autoRotate = false
 })
 
 // ── Build ─────────────────────────────────────────────────────────────────────
@@ -1098,7 +1121,19 @@ inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') buildMol(input
 controls.addEventListener('start', () => { controls.autoRotate = false })
 window.addEventListener('keydown', e => { if (e.key === 'Escape') hideAtomPanel() })
 
-renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera) })
+let _zoomTarget = null
+
+renderer.setAnimationLoop(() => {
+  if (_zoomTarget !== null) {
+    const offset = camera.position.clone().sub(controls.target)
+    const cur    = offset.length()
+    const next   = cur + (_zoomTarget - cur) * 0.1
+    camera.position.copy(controls.target).addScaledVector(offset.normalize(), next)
+    if (Math.abs(next - _zoomTarget) < 0.04) _zoomTarget = null
+  }
+  controls.update()
+  renderer.render(scene, camera)
+})
 
 window.addEventListener('resize', () => {
   camera.aspect = wrap.clientWidth / wrap.clientHeight
@@ -1136,7 +1171,13 @@ window.addEventListener('resize', () => {
   })
 
   document.getElementById('tog-rotate').addEventListener('change', e => {
+    _autoRotateEnabled = e.target.checked
     controls.autoRotate = e.target.checked
+    if (!e.target.checked) clearTimeout(_rotateResumeTimer)
+  })
+
+  document.getElementById('rng-speed').addEventListener('input', e => {
+    controls.autoRotateSpeed = e.target.value / 10
   })
 })()
 
